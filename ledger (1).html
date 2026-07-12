@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#1B1B18">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Markup Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --paper-line:#E4E1D8;
+    --ink:#1B1B18;
+    --ink-soft:#6E6B62;
+    --green:#1B6B3C;
+    --green-soft:#E7F1EA;
+    --red:#B5342A;
+    --red-soft:#F7E7E4;
+    --gold:#A6791F;
+    --shadow: 0 1px 0 rgba(0,0,0,0.05);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: repeating-linear-gradient(180deg, #E9E6DC 0px, #E9E6DC 2px, #EDEAE0 2px, #EDEAE0 4px);
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding: 20px 12px 60px;
+  }
+
+  .receipt{
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--paper);
+    position:relative;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .receipt::before, .receipt::after{
+    content:"";
+    display:block;
+    height:14px;
+    background:
+      radial-gradient(circle at 10px 0, transparent 8px, var(--paper) 8.5px) top left,
+      radial-gradient(circle at 10px 14px, transparent 8px, var(--paper) 8.5px) top left;
+    background-size: 20px 14px;
+    background-repeat: repeat-x;
+  }
+  .receipt::before{
+    background-color:#E9E6DC;
+  }
+  .receipt::after{
+    background-color:#E9E6DC;
+    transform: scaleY(-1);
+  }
+
+  header{
+    padding: 28px 26px 18px;
+    border-bottom: 1px dashed var(--paper-line);
+    text-align:center;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 26px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    margin:0 0 6px;
+  }
+  .sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+
+  .table-wrap{
+    overflow-x:auto;
+    padding: 6px 0 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  table{
+    border-collapse:collapse;
+    width:100%;
+    min-width: 820px;
+  }
+  thead th{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    text-align:left;
+    padding:10px 10px;
+    border-bottom: 1px solid var(--ink);
+    white-space:nowrap;
+    position: sticky;
+    top:0;
+    background:var(--paper);
+    z-index:2;
+  }
+  thead th.num{text-align:right;}
+  tbody td{
+    padding:8px 10px;
+    border-bottom: 1px solid var(--paper-line);
+    vertical-align:middle;
+  }
+  tbody tr:hover{ background: #F4F2EC; }
+
+  td.name-cell{
+    position:sticky;
+    left:0;
+    background:var(--paper);
+    z-index:1;
+    min-width:150px;
+  }
+  tbody tr:hover td.name-cell{ background:#F4F2EC; }
+
+  input{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    border:1px solid transparent;
+    background:transparent;
+    border-radius:4px;
+    padding:6px 7px;
+    width:100%;
+    color:var(--ink);
+    transition: border-color .15s, background .15s;
+  }
+  input[type="text"]{
+    font-family:'Inter',sans-serif;
+    font-weight:500;
+  }
+  input:hover{ border-color: var(--paper-line); }
+  input:focus{
+    outline:none;
+    border-color: var(--ink);
+    background:#fff;
+  }
+  input.num{ text-align:right; }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type=number]{ -moz-appearance:textfield; }
+
+  .col-old, .col-new, .col-units, .col-sold{ width:90px; }
+  .col-pct{ width:96px; }
+
+  .stamp{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:13px;
+    color:var(--red);
+    border:1.5px solid var(--red);
+    border-radius:6px;
+    padding:4px 7px;
+    transform: rotate(-2deg);
+    white-space:nowrap;
+    background: var(--red-soft);
+  }
+
+  .new-price{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    color:var(--green);
+    text-align:right;
+    display:block;
+  }
+
+  .del-btn{
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    padding:6px 8px;
+    border-radius:6px;
+    transition: color .15s, background .15s;
+  }
+  .del-btn:hover{ color:var(--red); background:var(--red-soft); }
+
+  .add-row-wrap{
+    padding: 16px 26px 8px;
+    display:flex;
+    justify-content:center;
+  }
+  .add-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:.02em;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:11px 20px;
+    border-radius:999px;
+    border:1.5px dashed var(--ink);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer;
+    transition: background .15s, color .15s, border-style .15s;
+  }
+  .add-btn:hover{ background:var(--ink); color:var(--paper); border-style:solid; }
+  .add-btn .plus{ font-size:18px; line-height:1; }
+
+  .remaining{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    text-align:right;
+    display:block;
+  }
+  .remaining.low{ color:var(--red); }
+  .remaining.ok{ color:var(--ink); }
+
+  footer.app-footer{
+    margin: 4px 26px 22px;
+    padding-top:14px;
+    border-top: 1px dashed var(--paper-line);
+    text-align:center;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+
+  .empty-state{
+    padding: 40px 26px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+  .empty-state b{ color:var(--ink); }
+
+  .save-indicator{
+    position:fixed;
+    bottom:16px;
+    left:50%;
+    transform: translateX(-50%) translateY(20px);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--paper);
+    background: var(--ink);
+    padding:8px 16px;
+    border-radius:999px;
+    opacity:0;
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events:none;
+    z-index:10;
+  }
+  .save-indicator.show{
+    opacity:1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 480px){
+    header{ padding: 22px 16px 16px; }
+    h1{ font-size:21px; }
+    footer.app-footer{ margin:4px 16px 18px; }
+    .add-row-wrap{ padding:14px 16px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="receipt">
+  <header>
+    <p class="eyebrow">Product · Old Price · Markup</p>
+    <h1>Markup Ledger</h1>
+    <p class="sub">Enter a product, mark it up, track what sold.</p>
+  </header>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:150px;">Product</th>
+          <th class="num">Old Price</th>
+          <th class="num">% Added</th>
+          <th class="num">Added Amt</th>
+          <th class="num">New Price</th>
+          <th class="num">Units</th>
+          <th class="num">Sold</th>
+          <th class="num">Remaining</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rowsBody"></tbody>
+    </table>
+  </div>
+
+  <div id="emptyState" class="empty-state" style="display:none;">
+    No products yet — press <b>+ Add product</b> to start your first line.
+  </div>
+
+  <div class="add-row-wrap">
+    <button class="add-btn" id="addBtn"><span class="plus">+</span> Add product</button>
+  </div>
+
+  <footer class="app-footer">Saved automatically on this device</footer>
+</div>
+
+<div class="save-indicator" id="saveIndicator">Saved</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'markup-ledger-rows';
+  const rowsBody = document.getElementById('rowsBody');
+  const emptyState = document.getElementById('emptyState');
+  const addBtn = document.getElementById('addBtn');
+  const saveIndicator = document.getElementById('saveIndicator');
+
+  let rows = [];
+  let saveTimer = null;
+
+  function uid(){
+    return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+  }
+
+  function newRow(partial){
+    return Object.assign({
+      id: uid(),
+      name: '',
+      oldPrice: 0,
+      pct: 0,
+      units: 0,
+      sold: 0
+    }, partial || {});
+  }
+
+  function fmt(n){
+    if (isNaN(n)) return '0.00';
+    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function calc(row){
+    const added = row.oldPrice * (row.pct / 100);
+    const newPrice = row.oldPrice + added;
+    return { added, newPrice };
+  }
+
+  function render(){
+    rowsBody.innerHTML = '';
+    emptyState.style.display = rows.length ? 'none' : 'block';
+
+    rows.forEach(row => {
+      const { added, newPrice } = calc(row);
+      const tr = document.createElement('tr');
+      tr.dataset.id = row.id;
+
+      tr.innerHTML = `
+        <td class="name-cell">
+          <input type="text" class="f-name" placeholder="Product name" value="${escapeAttr(row.name)}">
+        </td>
+        <td>
+          <input type="number" inputmode="decimal" step="0.01" class="num f-old col-old" value="${row.oldPrice}">
+        </td>
+        <td style="text-align:right;">
+          <span class="stamp"><input type="number" inputmode="decimal" step="0.1" class="num f-pct col-pct" value="${row.pct}" style="border:none;background:transparent;color:inherit;width:52px;padding:0;text-align:right;">%</span>
+        </td>
+        <td class="num" data-role="added" style="text-align:right; font-family:'IBM Plex Mono',monospace; color:var(--ink-soft);">${fmt(added)}</td>
+        <td class="num"><span class="new-price" data-role="newPrice">${fmt(newPrice)}</span></td>
+        <td>
+          <input type="number" inputmode="numeric" step="1" class="num f-units col-units" value="${row.units}">
+        </td>
+        <td>
+          <input type="number" inputmode="numeric" step="1" class="num f-sold col-sold" value="${row.sold}">
+        </td>
+        <td class="num"><span class="remaining" data-role="remaining"></span></td>
+        <td style="text-align:center;">
+          <button class="del-btn" title="Remove product" aria-label="Remove product">✕</button>
+        </td>
+      `;
+      rowsBody.appendChild(tr);
+      updateRemaining(tr, row);
+    });
+  }
+
+  function updateRemaining(tr, row){
+    const remaining = (Number(row.units)||0) - (Number(row.sold)||0);
+    const el = tr.querySelector('[data-role="remaining"]');
+    el.textContent = remaining.toLocaleString();
+    el.classList.toggle('low', remaining < 0);
+    el.classList.toggle('ok', remaining >= 0);
+  }
+
+  function escapeAttr(s){
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function findRow(id){
+    return rows.find(r => r.id === id);
+  }
+
+  // Event delegation for inputs and delete buttons
+  rowsBody.addEventListener('input', (e) => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    const row = findRow(tr.dataset.id);
+    if (!row) return;
+
+    if (e.target.classList.contains('f-name')) row.name = e.target.value;
+    if (e.target.classList.contains('f-old')) row.oldPrice = parseFloat(e.target.value) || 0;
+    if (e.target.classList.contains('f-pct')) row.pct = parseFloat(e.target.value) || 0;
+    if (e.target.classList.contains('f-units')) row.units = parseInt(e.target.value) || 0;
+    if (e.target.classList.contains('f-sold')) row.sold = parseInt(e.target.value) || 0;
+
+    // Only update the computed cells of this row, not the whole table (keeps focus)
+    const { added, newPrice } = calc(row);
+    tr.querySelector('[data-role="added"]').textContent = fmt(added);
+    tr.querySelector('[data-role="newPrice"]').textContent = fmt(newPrice);
+    updateRemaining(tr, row);
+    scheduleSave();
+  });
+
+  rowsBody.addEventListener('click', (e) => {
+    if (e.target.classList.contains('del-btn')) {
+      const tr = e.target.closest('tr');
+      const id = tr.dataset.id;
+      rows = rows.filter(r => r.id !== id);
+      render();
+      scheduleSave();
+    }
+  });
+
+  addBtn.addEventListener('click', () => {
+    rows.push(newRow());
+    render();
+    scheduleSave();
+    // focus the new row's name field
+    requestAnimationFrame(() => {
+      const lastInput = rowsBody.querySelector('tr:last-child .f-name');
+      if (lastInput) lastInput.focus();
+    });
+  });
+
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveData, 300);
+  }
+
+  function saveData(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+      flashSaved();
+    }catch(err){
+      console.error('Save failed', err);
+    }
+  }
+
+  function flashSaved(){
+    saveIndicator.classList.add('show');
+    clearTimeout(flashSaved._t);
+    flashSaved._t = setTimeout(() => saveIndicator.classList.remove('show'), 1000);
+  }
+
+  function loadData(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) rows = parsed;
+      }
+    }catch(err){
+      rows = [];
+    }
+    render();
+  }
+
+  // Belt-and-suspenders: also save immediately if the app is backgrounded/closed
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveData();
+  });
+  window.addEventListener('pagehide', saveData);
+
+  loadData();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
